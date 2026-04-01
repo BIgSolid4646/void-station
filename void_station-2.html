@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOID STATION — An Eldritch Horror</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+  :root {
+    --void:#020408;--deep:#050c14;--panel:#0a1520;--border:#1a3040;
+    --dim:#2a4a60;--glow:#00c8ff;--glow2:#0080aa;--crimson:#8b0000;
+    --red:#cc2200;--text:#a0c8d8;--muted:#4a7a90;--white:#d0e8f0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--void);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:18px;line-height:1.7;min-height:100vh;overflow-x:hidden;}
+  body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:200;}
+  #app{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:20px;min-height:100vh;display:flex;flex-direction:column;}
+  header{text-align:center;padding:30px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px;}
+  .station-id{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--glow2);letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;opacity:0.7;}
+  h1{font-family:'Share Tech Mono',monospace;font-size:clamp(26px,5vw,48px);font-weight:400;color:var(--white);letter-spacing:8px;text-transform:uppercase;text-shadow:0 0 30px rgba(0,200,255,0.4),0 0 60px rgba(0,200,255,0.1);margin-bottom:6px;}
+  .subtitle{font-style:italic;color:var(--muted);font-size:14px;letter-spacing:1px;}
+  .status-bar{display:flex;gap:20px;padding:10px 16px;background:var(--panel);border:1px solid var(--border);margin-bottom:16px;font-family:'Share Tech Mono',monospace;font-size:11px;flex-wrap:wrap;align-items:center;}
+  .stat{display:flex;gap:8px;align-items:center;}
+  .stat-label{color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .stat-value{color:var(--glow);}
+  .stat-value.danger{color:var(--red);}
+  .stat-value.warning{color:#ffaa00;}
+  .sanity-bar{flex:1;min-width:120px;display:flex;align-items:center;gap:8px;}
+  .bar-track{flex:1;height:5px;background:var(--border);overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--glow2),var(--glow));transition:width 0.8s ease,background 0.5s ease;}
+  .scene-wrapper{position:relative;width:100%;margin-bottom:16px;border:1px solid var(--border);overflow:hidden;background:#000;}
+  #scene-canvas{display:block;width:100%;height:220px;}
+  .scene-overlay{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(2,4,8,0.7) 100%);pointer-events:none;}
+  .scene-label{position:absolute;bottom:10px;left:14px;font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(0,200,255,0.5);letter-spacing:3px;text-transform:uppercase;pointer-events:none;}
+  .story-container{background:linear-gradient(180deg,var(--deep) 0%,var(--void) 100%);border:1px solid var(--border);padding:28px;margin-bottom:16px;min-height:200px;position:relative;}
+  .story-container::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,80,120,0.06) 0%,transparent 70%);pointer-events:none;}
+  #story-text{position:relative;z-index:1;}
+  #story-text p{margin-bottom:14px;}
+  .text-appear{animation:fadeIn 0.7s ease forwards;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .corrupted{color:#6a2040;font-style:italic;animation:flicker 3s infinite;}
+  @keyframes flicker{0%,95%,100%{opacity:1}96%{opacity:0.3}97%{opacity:0.9}98%{opacity:0.1}99%{opacity:0.8}}
+  .emphasis{color:var(--white);font-style:italic;}
+  .horror{color:#cc4444;}
+  .choices-container{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .choice-btn{background:transparent;border:1px solid var(--dim);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:16px;padding:13px 20px;text-align:left;cursor:pointer;transition:all 0.2s ease;line-height:1.4;}
+  .choice-btn::before{content:'› ';font-family:'Share Tech Mono',monospace;color:var(--glow2);font-size:13px;transition:color 0.2s ease;}
+  .choice-btn:hover{border-color:var(--glow2);background:rgba(0,128,170,0.08);color:var(--white);transform:translateX(4px);}
+  .choice-btn:hover::before{color:var(--glow);}
+  .log-toggle{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;padding:6px 0;text-transform:uppercase;letter-spacing:2px;transition:color 0.2s;}
+  .log-toggle:hover{color:var(--text);}
+  .log-container{display:none;background:var(--panel);border:1px solid var(--border);padding:14px;margin-top:8px;max-height:160px;overflow-y:auto;font-size:13px;color:var(--muted);}
+  .log-container.open{display:block;}
+  .log-entry{border-bottom:1px solid rgba(26,48,64,0.5);padding:5px 0;font-style:italic;}
+  .restart-btn{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--crimson);background:none;border:1px solid var(--crimson);cursor:pointer;padding:7px 14px;text-transform:uppercase;letter-spacing:2px;transition:all 0.2s;}
+  .restart-btn:hover{background:rgba(139,0,0,0.15);color:var(--red);border-color:var(--red);}
+  .horror-vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 30%,rgba(80,0,0,0.5) 100%);opacity:0;transition:opacity 0.3s ease;z-index:150;}
+  .horror-vignette.active{opacity:1;}
+  .ending-box{padding:24px;border:1px solid var(--crimson);background:rgba(60,0,0,0.2);text-align:center;margin-bottom:16px;}
+  .ending-title{font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:4px;margin-bottom:14px;}
+  .ending-title.good{color:var(--glow);border-color:var(--glow2);}
+  .ending-title.bad{color:var(--red);}
+  .ending-title.transcend{color:#aa66ff;}
+  footer{text-align:center;padding:18px 0;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--border);letter-spacing:2px;}
+</style>
+</head>
+<body>
+<div class="horror-vignette" id="vignette"></div>
+<div id="app">
+  <header>
+    <div class="station-id">USCSS MERIDIAN — SECTOR 7G — DEEP SPACE RESEARCH PLATFORM</div>
+    <h1>Void Station</h1>
+    <div class="subtitle">an eldritch horror in the dark between stars</div>
+  </header>
+  <div class="status-bar">
+    <div class="stat"><span class="stat-label">Loc:</span><span class="stat-value" id="stat-location">Cryo Bay</span></div>
+    <div class="stat"><span class="stat-label">Crew:</span><span class="stat-value" id="stat-crew">Unknown</span></div>
+    <div class="sanity-bar">
+      <span class="stat-label">Sanity:</span>
+      <div class="bar-track"><div class="bar-fill" id="sanity-bar" style="width:100%"></div></div>
+      <span class="stat-value" id="stat-sanity">100</span>
+    </div>
+  </div>
+  <div class="scene-wrapper">
+    <canvas id="scene-canvas" width="860" height="220"></canvas>
+    <div class="scene-overlay"></div>
+    <div class="scene-label" id="scene-label">CRYO BAY — DECK 4</div>
+  </div>
+  <div class="story-container"><div id="story-text"></div></div>
+  <div class="choices-container" id="choices"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <button class="log-toggle" onclick="toggleLog()">▸ Ship's Log</button>
+    <button class="restart-btn" onclick="restartGame()">⟳ New Game</button>
+  </div>
+  <div class="log-container" id="log-container"></div>
+  <footer>TRANSMISSION ENCRYPTED — WEYLAND-YUTANI DEEP SPACE DIVISION — ALL DATA CLASSIFIED</footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  CANVAS SCENE RENDERER
+// ═══════════════════════════════════════════
+const canvas = document.getElementById('scene-canvas');
+const ctx = canvas.getContext('2d');
+let sceneTime = 0;
+let currentScene = 'cryo';
+let horrorIntensity = 0;
+
+function lerp(a,b,t){return a+(b-a)*t;}
+
+function drawScanlines(){
+  for(let y=0;y<canvas.height;y+=4){ctx.fillStyle='rgba(0,0,0,0.07)';ctx.fillRect(0,y,canvas.width,1);}
+}
+
+function drawStars(alpha){
+  const W=canvas.width,H=canvas.height;
+  for(let i=0;i<120;i++){
+    const sx=((i*137.508+50)%W),sy=((i*97.3+20)%H);
+    const fl=0.4+0.6*Math.sin(sceneTime*0.018+i);
+    ctx.beginPath();ctx.arc(sx,sy,i%5===0?1.2:0.5,0,Math.PI*2);
+    ctx.fillStyle=`rgba(160,220,255,${alpha*fl})`;ctx.fill();
+  }
+}
+
+function drawCryo(t){
+  const W=canvas.width,H=canvas.height;
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#020810');bg.addColorStop(1,'#000205');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  drawStars(0.25);
+  const podW=58,podH=105,podY=H-podH-18,podCount=7,sp=W/(podCount+1);
+  for(let i=0;i<podCount;i++){
+    const px=sp*(i+1)-podW/2,broken=(i===2||i===5),open=(i===0);
+    const pg=ctx.createLinearGradient(px,podY,px+podW,podY);
+    pg.addColorStop(0,'#0a1828');pg.addColorStop(0.5,'#142840');pg.addColorStop(1,'#0a1828');
+    ctx.fillStyle=pg;ctx.beginPath();ctx.roundRect(px,podY,podW,podH,[podW/2,podW/2,4,4]);ctx.fill();
+    ctx.strokeStyle=broken?'rgba(180,40,40,0.5)':open?'rgba(0,200,255,0.6)':'rgba(0,150,200,0.3)';
+    ctx.lineWidth=1.5;ctx.stroke();
+    const wY=podY+18,wR=17;
+    ctx.beginPath();ctx.arc(px+podW/2,wY+wR,wR,0,Math.PI*2);
+    if(open)ctx.fillStyle='rgba(0,0,0,0.9)';
+    else if(broken)ctx.fillStyle='rgba(80,10,10,0.8)';
+    else{const oc=Math.sin(t*0.015+i)*0.3+0.7;ctx.fillStyle=`rgba(0,${Math.floor(40*oc)},${Math.floor(80*oc)},0.9)`;}
+    ctx.fill();ctx.strokeStyle='rgba(0,200,255,0.2)';ctx.lineWidth=1;ctx.stroke();
+    if(!open&&!broken){ctx.fillStyle='rgba(0,100,160,0.15)';ctx.beginPath();ctx.ellipse(px+podW/2,wY+wR+5,9,13,0,0,Math.PI*2);ctx.fill();}
+    for(let l=0;l<3;l++){
+      ctx.beginPath();ctx.arc(px+7+l*10,podY+podH-14,3,0,Math.PI*2);
+      if(broken)ctx.fillStyle=l===1?`rgba(200,50,50,${0.5+0.5*Math.sin(t*0.1+l)})`:'rgba(40,0,0,0.5)';
+      else if(open)ctx.fillStyle=l===0?'rgba(0,255,150,0.8)':'rgba(20,60,40,0.4)';
+      else ctx.fillStyle=`rgba(0,180,255,${0.3+0.3*Math.sin(t*0.008+i+l)})`;
+      ctx.fill();
+    }
+  }
+  for(let x=0;x<W;x+=20){ctx.beginPath();ctx.moveTo(x,H-18);ctx.lineTo(x,H);ctx.strokeStyle='rgba(0,80,120,0.2)';ctx.lineWidth=0.5;ctx.stroke();}
+  ctx.beginPath();ctx.moveTo(0,H-18);ctx.lineTo(W,H-18);ctx.strokeStyle='rgba(0,100,140,0.3)';ctx.lineWidth=1;ctx.stroke();
+  const rp=Math.sin(t*0.03)*0.5+0.5;
+  const rg=ctx.createRadialGradient(W*0.08,8,0,W*0.08,8,70);
+  rg.addColorStop(0,`rgba(200,0,0,${0.18*rp})`);rg.addColorStop(1,'transparent');
+  ctx.fillStyle=rg;ctx.fillRect(0,0,W,H);
+}
+
+function drawCorridor(t){
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  ctx.fillStyle='#010306';ctx.fillRect(0,0,W,H);
+  const vp={x:cx,y:cy*0.58},depth=12;
+  for(let d=depth;d>=0;d--){
+    const p=d/depth,ww=lerp(W*0.04,W*0.47,p),wt=lerp(vp.y-2,0,p),wb=lerp(vp.y+2,H,p);
+    const br=0.04+p*0.11;
+    ctx.fillStyle=`rgba(${Math.floor(br*28)},${Math.floor(br*55)},${Math.floor(br*75)},1)`;
+    ctx.fillRect(cx-ww,wt,2,wb-wt);ctx.fillRect(cx+ww,wt,2,wb-wt);
+    if(d%2===0){
+      ctx.strokeStyle=`rgba(0,${Math.floor(br*180)},${Math.floor(br*240)},0.25)`;ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(cx-ww,wt);ctx.lineTo(cx+ww,wt);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx-ww,wb);ctx.lineTo(cx+ww,wb);ctx.stroke();
+    }
+    if(d%3===0){
+      const la=(0.08+p*0.35)*(d===0?1:0.45);
+      const lg=ctx.createRadialGradient(cx,wt+4,0,cx,wt+4,ww*0.3);
+      lg.addColorStop(0,`rgba(80,180,255,${la})`);lg.addColorStop(1,'transparent');
+      ctx.fillStyle=lg;ctx.fillRect(cx-ww,wt,ww*2,(wb-wt)*0.5);
+    }
+  }
+  const fl=Math.sin(t*0.12)>0.85?0.08:1;
+  const nl=ctx.createRadialGradient(cx,H*0.28,0,cx,H*0.28,180);
+  nl.addColorStop(0,`rgba(0,130,240,${0.12*fl})`);nl.addColorStop(1,'transparent');
+  ctx.fillStyle=nl;ctx.fillRect(0,0,W,H);
+  if(horrorIntensity>0.4){
+    const fa=(horrorIntensity-0.4)*0.7*(0.5+0.5*Math.sin(t*0.02));
+    ctx.fillStyle=`rgba(0,0,0,${fa})`;ctx.beginPath();ctx.ellipse(cx,vp.y-8,5,18,0,0,Math.PI*2);ctx.fill();
+    for(let i=0;i<5;i++){
+      ctx.beginPath();ctx.moveTo(cx,vp.y+8);
+      const tx=cx+Math.sin(t*0.03+i*1.2)*18,ty=vp.y+28+i*7;
+      ctx.bezierCurveTo(cx,vp.y+14,tx,ty-10,tx,ty);
+      ctx.strokeStyle=`rgba(40,0,20,${fa*0.5})`;ctx.lineWidth=1.5;ctx.stroke();
+    }
+  }
+}
+
+function drawLab(t){
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#010508';ctx.fillRect(0,0,W,H);drawStars(0.08);
+  const by=H*0.55;
+  ctx.fillStyle='#0c1e2a';ctx.fillRect(0,by,W*0.42,H-by);ctx.fillRect(W*0.58,by,W*0.42,H-by);
+  ctx.strokeStyle='rgba(0,150,200,0.25)';ctx.lineWidth=1;
+  ctx.strokeRect(0,by,W*0.42,H-by);ctx.strokeRect(W*0.58,by,W*0.42,H-by);
+  const hcx=W/2,hcy=H*0.3,hr=48+Math.sin(t*0.02)*5;
+  ctx.beginPath();ctx.arc(hcx,hcy,hr,0,Math.PI*2);
+  ctx.strokeStyle=`rgba(0,200,255,${0.18+0.08*Math.sin(t*0.03)})`;ctx.lineWidth=1;ctx.stroke();
+  for(let r=10;r<hr;r+=11){
+    ctx.beginPath();ctx.arc(hcx,hcy,r,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(0,140,240,${0.06+0.04*Math.sin(t*0.02+r)})`;ctx.lineWidth=0.5;ctx.stroke();
+  }
+  if(horrorIntensity>0.2){
+    const tc=Math.floor(horrorIntensity*8);
+    for(let i=0;i<tc;i++){
+      const ang=(i/tc)*Math.PI*2+t*0.01,len=hr*(0.8+horrorIntensity*0.5);
+      ctx.beginPath();ctx.moveTo(hcx,hcy);
+      const cp1x=hcx+Math.cos(ang+0.3)*len*0.5,cp1y=hcy+Math.sin(ang+0.3)*len*0.5;
+      ctx.quadraticCurveTo(cp1x,cp1y,hcx+Math.cos(ang)*len,hcy+Math.sin(ang)*len);
+      ctx.strokeStyle=`rgba(${Math.floor(140*horrorIntensity)},0,${Math.floor(70*horrorIntensity)},${0.3*horrorIntensity})`;
+      ctx.lineWidth=1;ctx.stroke();
+    }
+  } else {
+    const ang=t*0.02;ctx.beginPath();ctx.moveTo(hcx,hcy);
+    ctx.lineTo(hcx+Math.cos(ang)*hr,hcy+Math.sin(ang)*hr);
+    ctx.strokeStyle='rgba(0,240,180,0.5)';ctx.lineWidth=1.5;ctx.stroke();
+  }
+}
+
+function drawBridge(t){
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#010208';ctx.fillRect(0,0,W,H);
+  const vg=ctx.createRadialGradient(W/2,H*0.28,8,W/2,H*0.28,W*0.55);
+  vg.addColorStop(0,'rgba(0,5,20,1)');vg.addColorStop(0.6,'rgba(0,2,10,1)');vg.addColorStop(1,'rgba(0,0,5,1)');
+  ctx.fillStyle=vg;ctx.beginPath();ctx.roundRect(W*0.05,5,W*0.9,H*0.55,4);ctx.fill();
+  ctx.strokeStyle='rgba(0,100,160,0.45)';ctx.lineWidth=2;ctx.stroke();
+  for(let i=0;i<200;i++){
+    const sx=W*0.05+(i*113.7%(W*0.9)),sy=5+(i*79.3%(H*0.55));
+    const br=0.2+0.8*Math.sin(t*0.007+i);
+    ctx.beginPath();ctx.arc(sx,sy,i%5===0?1.4:0.5,0,Math.PI*2);
+    ctx.fillStyle=`rgba(200,225,255,${br*0.65})`;ctx.fill();
+  }
+  if(horrorIntensity>0.1){
+    const aX=W*0.34,aY=H*0.24,aR=14+horrorIntensity*28+Math.sin(t*0.04)*4;
+    const ag=ctx.createRadialGradient(aX,aY,0,aX,aY,aR);
+    ag.addColorStop(0,`rgba(${Math.floor(190*horrorIntensity)},0,${Math.floor(90*horrorIntensity)},0.75)`);
+    ag.addColorStop(1,'transparent');
+    ctx.fillStyle=ag;ctx.beginPath();ctx.roundRect(W*0.05,5,W*0.9,H*0.55,4);ctx.fill();
+  }
+  const cy2=H*0.62;
+  ctx.fillStyle='#0a1525';ctx.fillRect(0,cy2,W,H-cy2);
+  for(let i=0;i<6;i++){
+    const ccx=W*(0.09+i*0.14),ccy=cy2+14,cw=W*0.1,ch=H*0.2;
+    ctx.fillStyle='#050e18';ctx.fillRect(ccx,ccy,cw,ch);
+    for(let l=0;l<4;l++){
+      const la=0.18+0.28*Math.sin(t*0.018+i+l);
+      ctx.fillStyle=`rgba(0,190,${95+l*38},${la})`;
+      ctx.fillRect(ccx+4,ccy+5+l*(ch/4*0.68),cw-8,2);
+    }
+    ctx.strokeStyle='rgba(0,95,140,0.38)';ctx.lineWidth=0.7;ctx.strokeRect(ccx,ccy,cw,ch);
+  }
+}
+
+function drawEngine(t){
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#020306';ctx.fillRect(0,0,W,H);
+  const cx=W/2,cy=H*0.4,cr=38;
+  for(let r=cr*3;r>0;r-=7){
+    const al=(1-r/(cr*3))*0.07;
+    const hi=horrorIntensity;
+    const hue=hi>0.5?`${Math.floor(lerp(175,0,hi))},${Math.floor(lerp(210,45,hi))},${Math.floor(lerp(248,45,hi))}`:'95,195,250';
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle=`rgba(${hue},${al})`;ctx.fill();
+  }
+  for(let ring=0;ring<4;ring++){
+    const rr=cr*(0.38+ring*0.19),rot=t*(0.009+ring*0.004)*(ring%2===0?1:-1);
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);
+    ctx.strokeStyle=horrorIntensity>0.5?'rgba(195,45,45,0.38)':'rgba(0,170,250,0.28)';
+    ctx.lineWidth=1.4;ctx.setLineDash([4,7]);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  }
+  const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,cr);
+  if(horrorIntensity>0.5){cg.addColorStop(0,`rgba(248,${Math.floor(lerp(195,0,horrorIntensity))},45,0.88)`);cg.addColorStop(1,'rgba(75,0,0,0.18)');}
+  else{cg.addColorStop(0,'rgba(95,215,250,0.88)');cg.addColorStop(0.5,'rgba(0,115,195,0.48)');cg.addColorStop(1,'rgba(0,38,75,0.08)');}
+  ctx.beginPath();ctx.arc(cx,cy,cr,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();
+  [0.14,0.29,0.71,0.86].forEach(px=>{
+    ctx.fillStyle='#0a1520';ctx.fillRect(W*px-7,0,14,H);
+    ctx.strokeStyle='rgba(0,75,115,0.38)';ctx.lineWidth=1;ctx.strokeRect(W*px-7,0,14,H);
+  });
+}
+
+function drawBreach(t){
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H*0.44;
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  for(let i=0;i<8;i++){
+    const ang=(i/8)*Math.PI*2+t*0.007,r=58+Math.sin(t*0.018+i)*18;
+    const x=cx+Math.cos(ang)*r,y=cy+Math.sin(ang)*r*0.58;
+    const g=ctx.createRadialGradient(x,y,0,x,y,38);
+    g.addColorStop(0,`rgba(${Math.floor(55*(i/8))},0,${Math.floor(35*(i/8))},0.38)`);g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+  ctx.save();ctx.translate(cx,cy);
+  for(let i=0;i<12;i++){
+    const a1=(i/12)*Math.PI*2+t*0.0028,a2=a1+Math.PI*(0.68+Math.sin(t*0.009+i)*0.28);
+    const r1=75+Math.sin(t*0.013+i)*28,r2=75+Math.cos(t*0.011+i*1.25)*28;
+    ctx.beginPath();ctx.moveTo(Math.cos(a1)*r1,Math.sin(a1)*r1*0.68);ctx.lineTo(Math.cos(a2)*r2,Math.sin(a2)*r2*0.68);
+    ctx.strokeStyle=`rgba(${Math.floor(95+i*9)},0,${Math.floor(48+i*4.5)},${0.13+0.09*Math.sin(t*0.018+i)})`;ctx.lineWidth=0.7;ctx.stroke();
+  }
+  ctx.restore();
+  const er=32+Math.sin(t*0.022)*7;
+  const eg=ctx.createRadialGradient(cx,cy,0,cx,cy,er);
+  eg.addColorStop(0,'rgba(0,0,0,1)');
+  eg.addColorStop(0.58,`rgba(${Math.floor(45*horrorIntensity)},0,${Math.floor(25*horrorIntensity)},0.75)`);
+  eg.addColorStop(1,'transparent');
+  ctx.beginPath();ctx.arc(cx,cy,er,0,Math.PI*2);ctx.fillStyle=eg;ctx.fill();
+  for(let i=0;i<55;i++){
+    const ang=(i/55)*Math.PI*2+t*0.0009,dist=95+(i*45%75);
+    ctx.beginPath();ctx.arc(cx+Math.cos(ang)*dist,cy+Math.sin(ang)*dist*0.68,0.7,0,Math.PI*2);
+    ctx.fillStyle=`rgba(195,175,250,${Math.sin(t*0.045+i)*0.38+0.38})`;ctx.fill();
+  }
+}
+
+function drawMedical(t){
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#010610';ctx.fillRect(0,0,W,H);
+  for(let i=0;i<3;i++){
+    const bx=W*(0.1+i*0.3),by=H*0.25,bw=W*0.22,bh=H*0.5;
+    ctx.fillStyle='#091520';ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle=horrorIntensity>0.3?`rgba(180,20,20,0.4)`:'rgba(0,150,200,0.3)';
+    ctx.lineWidth=1;ctx.strokeRect(bx,by,bw,bh);
+    const pulse=Math.sin(t*0.04+i*2)*0.5+0.5;
+    const sc=horrorIntensity>0.3?`rgba(180,0,0,${0.15*pulse})`:`rgba(0,200,100,${0.12*pulse})`;
+    ctx.fillStyle=sc;ctx.fillRect(bx+4,by+4,bw-8,bh-8);
+    if(i===1&&horrorIntensity>0.4){
+      ctx.fillStyle=`rgba(100,0,0,${(horrorIntensity-0.4)*0.6})`;
+      ctx.beginPath();ctx.ellipse(bx+bw/2,by+bh*0.4,15,30,0,0,Math.PI*2);ctx.fill();
+    }
+  }
+  const cross=(x,y,s,c)=>{ctx.fillStyle=c;ctx.fillRect(x-s/2,y-s*1.5,s,s*3);ctx.fillRect(x-s*1.5,y-s/2,s*3,s);};
+  cross(W*0.5,H*0.12,6,`rgba(0,200,100,${0.3+0.2*Math.sin(t*0.03)})`);
+}
+
+const SCENE_MAP={cryo:drawCryo,corridor:drawCorridor,lab:drawLab,bridge:drawBridge,engine:drawEngine,breach:drawBreach,medical:drawMedical};
+
+function getSceneKey(loc){
+  const l=loc.toLowerCase();
+  if(l.includes('cryo'))return'cryo';
+  if(l.includes('corridor')||l.includes('hallway'))return'corridor';
+  if(l.includes('lab')||l.includes('research')||l.includes('server'))return'lab';
+  if(l.includes('bridge')||l.includes('command'))return'bridge';
+  if(l.includes('engine')||l.includes('reactor'))return'engine';
+  if(l.includes('breach')||l.includes('void')||l.includes('anomal'))return'breach';
+  if(l.includes('medical')||l.includes('med bay'))return'medical';
+  return'corridor';
+}
+
+function renderScene(){
+  sceneTime++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  (SCENE_MAP[currentScene]||drawCorridor)(sceneTime);
+  drawScanlines();
+  if(horrorIntensity>0){
+    const hg=ctx.createRadialGradient(canvas.width/2,canvas.height/2,0,canvas.width/2,canvas.height/2,canvas.width*0.7);
+    hg.addColorStop(0,'transparent');hg.addColorStop(1,`rgba(55,0,0,${horrorIntensity*0.28})`);
+    ctx.fillStyle=hg;ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+  requestAnimationFrame(renderScene);
+}
+
+function setScene(loc){
+  currentScene=getSceneKey(loc);
+  document.getElementById('scene-label').textContent=loc.toUpperCase()+' — DECK 4';
+}
+
+// ═══════════════════════════════════════════
+//  BRANCHING STORY ENGINE
+// ═══════════════════════════════════════════
+
+// Node structure: { id, location, sanity_delta, horror, text, choices: [{label, next}], ending }
+// endings: { type: 'good'|'bad'|'transcend', title, text }
+
+const STORY = {
+  // ── ACT 1: AWAKENING ──
+  start: {
+    id:'start', location:'Cryo Bay', sanity_delta:0,
+    text:`The cold comes first — a marrow-deep cold that no amount of warming fluid can fully dispel. Your cryopod hisses open and you fall forward, catching yourself on the frost-rimmed floor. The emergency lighting has kicked in: a dim, arterial red that turns every shadow into a wound.
+
+You are Dr. Vasquez, xenobiologist, USCSS Meridian. The mission briefing is still crystallizing in your thawed mind — deep space research, anomalous signal, six months out from the nearest inhabited system. You remember boarding the station. You remember the pre-cryo safety briefing. You remember nothing after.
+
+The cryo bay holds fourteen pods. Two are cracked open like yours. The other twelve are sealed, their occupant indicators dark. No green lights. No blue. Just twelve black circles staring back at you like a row of dead eyes.
+
+The station groans. Somewhere deep in the hull, something shifts.`,
+    choices:[
+      {label:"Check the other open pod — find out who else woke up", next:'check_pod'},
+      {label:"Access the emergency terminal on the wall to get station status", next:'terminal_a1'},
+      {label:"Move immediately toward the Bridge — that's where answers are", next:'corridor_a1'},
+    ]
+  },
+
+  check_pod: {
+    id:'check_pod', location:'Cryo Bay', sanity_delta:-5, horror:true,
+    text:`The second open pod belongs to Dr. Chen, your colleague — you can tell by the name stenciled on the lid. But Dr. Chen is not inside it.
+
+What is inside it: a layer of crystallized frost, a torn sleeve from a research uniform, and three words scratched into the polymer interior with what appears to be a fingernail. The scratches are deep. Frantic. They required effort.
+
+<horror>DO NOT LISTEN</horror>
+
+Below the words, barely visible under the frost, is a dark smear. You tell yourself it is chemical lubricant from the cryo-fluid system. You tell yourself this very carefully. The smear forms no recognizable pattern, yet the longer you stare at it, the more certain you become that it is trying to show you something — something about angles, about the relationship between points in space, about a geometry that has no name in any human language.
+
+You look away. Your hands are shaking.`,
+    choices:[
+      {label:"Take the torn sleeve — it might be evidence", next:'terminal_a1'},
+      {label:"Get to the emergency terminal immediately", next:'terminal_a1'},
+      {label:"Leave the cryo bay now — something is wrong here", next:'corridor_a1'},
+    ]
+  },
+
+  terminal_a1: {
+    id:'terminal_a1', location:'Cryo Bay', sanity_delta:0,
+    text:`The emergency terminal flickers to life under your touch, its screen the only source of blue-white light in the bay. The system clock reads: Mission Day 187. You were scheduled for 180 days. You have been asleep seven days longer than planned.
+
+STATUS REPORT — USCSS MERIDIAN:
+Life support: NOMINAL
+Hull integrity: 94% (see breach report, Sector 7, Deck 2)
+Crew status: 2 of 14 active
+Navigation: OFFLINE
+Communications: OFFLINE
+Research status: PROJECT CARTOGRAPHER — SUSPENDED
+
+At the bottom of the log, a final entry from Chief Science Officer Dr. Okafor, timestamped four days ago:
+
+<emphasis>"Signal source identified. It is not a pulsar. It is not a natural phenomenon. We have been attempting communication for eleven days. Something is responding. God help us, something is responding. Tell the others not to—"</emphasis>
+
+The entry ends there. The cursor blinks in the silence.`,
+    choices:[
+      {label:"Search the ship's logs for earlier entries — what happened before this?", next:'logs_detail'},
+      {label:"Head to the Research Lab — Okafor's work will be there", next:'corridor_a1'},
+      {label:"Go directly to the Bridge and try to restore communications", next:'corridor_a1_bridge'},
+    ]
+  },
+
+  logs_detail: {
+    id:'logs_detail', location:'Cryo Bay', sanity_delta:-5,
+    text:`The earlier logs read like a slow descent. Day 142: signal first detected, irregular pulse pattern. Day 155: pattern identified as non-random, possible mathematical structure. Day 160: Okafor woke the research team. You were not among them — your specialty was not needed yet.
+
+Day 168: <emphasis>"The pattern is a language. We're certain of it. Fourteen days to achieve basic translation."</emphasis>
+
+Day 172: <emphasis>"First meaningful exchange. It asked us where we were. We told it."</emphasis>
+
+Day 175: Three crew members reported to Medical Bay with identical symptoms — persistent visual hallucinations, inability to close their eyes without seeing "the angles." Dr. Martinez's entry: <emphasis>"The patients insist they can see the signal even when the equipment is off. They say it's in the walls."</emphasis>
+
+Day 179: Log entries become fragmented. Names appear without context. Numbers that don't correspond to any known measurement system. One entry — from a Dr. Vasquez, your own account that you have no memory of — reads only: <emphasis>"It showed me where it lives. There are no words. I have put myself back to sleep before I can tell the others. I am sorry. I am so sorry."</emphasis>
+
+You stare at your own name on the screen for a very long time.`,
+    choices:[
+      {label:"Go to Medical Bay — find out what happened to the three affected crew", next:'medical_a'},
+      {label:"Go to the Research Lab — you need to see what Okafor was working on", next:'corridor_a1'},
+      {label:"Go straight to the Bridge — restore comms, call for evacuation", next:'corridor_a1_bridge'},
+    ]
+  },
+
+  corridor_a1: {
+    id:'corridor_a1', location:'Main Corridor', sanity_delta:0,
+    text:`The main corridor stretches ahead of you in both directions, lit in emergency red. The station's hum is more present here — you can feel it through your boots, a subsonic vibration that sits just below the threshold of hearing but makes your back teeth ache.
+
+The walls are standard military-grade polymer composite. You have walked corridors like this a hundred times. But something is wrong with the shadows in this one. They don't quite line up with their sources. The shadow of a ceiling pipe falls at the wrong angle. The shadow of your own hand, held up against the emergency light, is subtly, undeniably not the shape of your hand.
+
+You decide not to look at the shadows anymore.
+
+A sound reaches you from the direction of the Research Lab — a low, rhythmic tapping. Patient. Deliberate. Like someone waiting to be let in from the other side of a door. But the lab is not in that direction. The sound is coming from inside the wall.`,
+    choices:[
+      {label:"Go to the Research Lab (left corridor)", next:'lab_a'},
+      {label:"Investigate the tapping sound", next:'tapping'},
+      {label:"Head to the Bridge instead (right corridor)", next:'bridge_a'},
+    ]
+  },
+
+  corridor_a1_bridge: {
+    id:'corridor_a1_bridge', location:'Main Corridor', sanity_delta:0,
+    text:`You move quickly through the corridor toward the Bridge, keeping your eyes forward. The emergency lighting pulses once — a long, slow dimming, like a held breath — and then stabilizes.
+
+You pass a viewport. Space outside is as it should be: absolute black, hard stars, the cold geometry of vacuum. But as you pass, you notice something in the periphery of the glass. A shape against the stars. Not a ship. Not debris. Something that your brain initially classifies as a smear on the viewport, until you realize the smear is <emphasis>moving</emphasis>, and it is <emphasis>very far away</emphasis>, and it is <emphasis>very, very large</emphasis>.
+
+You do not stop walking. You do not look directly at it. You have the sudden, animal certainty that looking directly at it would be the last voluntary action you ever took.
+
+You make it to the Bridge corridor. The door is sealed.`,
+    choices:[
+      {label:"Try to bypass the door lock — you know the override codes", next:'bridge_a'},
+      {label:"Go to Engineering to restore power to the Bridge", next:'engine_a'},
+      {label:"Fall back to the Research Lab instead", next:'lab_a'},
+    ]
+  },
+
+  tapping: {
+    id:'tapping', location:'Main Corridor', sanity_delta:-10, horror:true,
+    text:`You press your ear to the wall. The tapping is closer now — inches away, separated from you by composite paneling designed to withstand explosive decompression.
+
+It stops the moment your ear touches the surface.
+
+Then: a voice. So quiet you might be imagining it. But you are not imagining it.
+
+<horror>"Vasquez. You came back. We thought you were gone like the others."</horror>
+
+It is Dr. Chen's voice. You are almost certain. But the tone is wrong — too measured, too calm, like someone reading from a script of how a frightened person should sound.
+
+<horror>"Vasquez, listen carefully. Don't go to the lab. Don't look at the signal data. If you haven't seen the angles yet, you can still leave. Get to the escape pods. Deck 3, Section C. You still have time."</horror>
+
+A pause. Then, in a register that is no longer quite human:
+
+<horror>"I don't have time anymore."</horror>
+
+Silence. The tapping does not resume.`,
+    choices:[
+      {label:"Go to Deck 3, Section C — find the escape pods", next:'escape_pods'},
+      {label:"Try to find where Chen is — cut through the wall panel", next:'lab_a'},
+      {label:"This could be a trap. Go to the Bridge", next:'bridge_a'},
+    ]
+  },
+
+  // ── ACT 2: INVESTIGATION ──
+  medical_a: {
+    id:'medical_a', location:'Medical Bay', sanity_delta:-5,
+    text:`The Medical Bay doors open to the smell of antiseptic and something underneath it — something organic and salt-sweet that doesn't belong in a medical environment. The beds are occupied.
+
+Three figures lie in the diagnostic beds, restrained at wrists and ankles with the station's emergency straps. They are alive. Their chests rise and fall in perfect synchronization — three bodies breathing as one organism. Their eyes are open, fixed on the ceiling.
+
+Their eyes are wrong. Not the irises — those are normal. The whites. The whites of their eyes are dark.
+
+Dr. Martinez's patient file is open on the bedside terminal. Final entry: <emphasis>"All three patients have entered a state of catatonic awareness. They respond to no stimuli. However, at 0300 hours, all three simultaneously turned their heads to face the exterior viewport and remained in that position for four hours and seventeen minutes. At 0717 they returned to baseline position. I have no clinical explanation."</emphasis>
+
+As you read, all three heads turn. They are looking at you now.`,
+    choices:[
+      {label:"Check the medical supply cabinet — take whatever might be useful", next:'medical_supplies'},
+      {label:"Try to communicate with one of the patients", next:'patient_talk'},
+      {label:"Leave immediately and go to the Research Lab", next:'lab_a'},
+    ]
+  },
+
+  patient_talk: {
+    id:'patient_talk', location:'Medical Bay', sanity_delta:-10, horror:true,
+    text:`You approach the nearest bed. The patient — Dr. Reyes, according to the wristband — tracks your movement with those dark-rimmed eyes. Up close you can see that the darkness in the whites is not bruising. It is pattern. Fractal, branching, like frost crystals viewed under magnification, spreading outward from the iris.
+
+You say her name. She responds.
+
+Her mouth opens. What comes out is not speech. It is the signal — the same mathematical pulse pattern from the logs, rendered in human vocal cords. Your body recognizes it before your mind does. Your vision blurs at the edges. You taste copper.
+
+Then, underneath the signal, in the gaps between pulses, like a face pressed against glass:
+
+<horror>"It's beautiful, Vasquez. That's the worst part. When you finally understand what it's saying — it's the most beautiful thing you'll ever hear. I would give anything to unhear it. I can't stop hearing it."</horror>
+
+She closes her mouth. All three patients look back at the ceiling.
+
+Your ears are ringing. The ringing has a pattern.`,
+    choices:[
+      {label:"Get out — go to the Research Lab", next:'lab_a'},
+      {label:"Try to sedate the patients — they need help", next:'medical_supplies'},
+      {label:"Sit with this for a moment. Try to understand what she told you", next:'patient_insight'},
+    ]
+  },
+
+  patient_insight:{
+    id:'patient_insight', location:'Medical Bay', sanity_delta:5,
+    text:`You sit with what Reyes said. <emphasis>Beautiful. The worst part is that it's beautiful.</emphasis>
+
+If the signal is not malevolent — if it is something stranger than evil, something that simply exists at a scale that the human mind was not built to process — then perhaps the question is not how to fight it, but how to survive contact with it. Perhaps there is a way to look at something vast without being destroyed by it.
+
+You notice, on the medical terminal, a record of which crew members developed symptoms after signal exposure and which did not. Three became catatonic. Three others show no effect. The difference, according to Dr. Martinez's notes, appears to be prior experience with deep-space isolation. Crew members who had logged the most hours alone in space — who had already learned to be comfortable with incomprehensible vastness — seemed partially resistant.
+
+You have logged 847 hours of solo research in deep space. More than anyone on the crew.
+
+You take a breath. You feel, for the first time, something that might be a very small advantage.`,
+    choices:[
+      {label:"Take the resistance data and go to the Research Lab", next:'lab_a'},
+      {label:"Take the resistance data and go directly to the Bridge", next:'bridge_a'},
+    ]
+  },
+
+  medical_supplies:{
+    id:'medical_supplies', location:'Medical Bay', sanity_delta:2,
+    text:`The supply cabinet yields sedatives, a neural dampener headset (designed for pain management, but theoretically capable of reducing sensory input broadly), and a personal locator beacon. You take all three.
+
+The neural dampener might protect you from the worst of whatever is affecting the crew. It won't be comfortable — it will dull everything, including your own cognition — but it might keep you functional in areas of high signal exposure.
+
+The locator beacon is nearly useless with communications offline, but you take it anyway. It's the kind of thing you take when you're not sure you'll be coherent enough later to think of taking it.`,
+    choices:[
+      {label:"Go to the Research Lab", next:'lab_a'},
+      {label:"Go to the Bridge", next:'bridge_a'},
+      {label:"Go directly to the Escape Pods", next:'escape_pods'},
+    ]
+  },
+
+  lab_a: {
+    id:'lab_a', location:'Research Lab', sanity_delta:-5,
+    text:`The Research Lab is the largest space on the station — three interconnected rooms of equipment for analyzing atmospheric, biological, and electromagnetic data. The lights here are white, not red. Emergency protocols somehow spared this section.
+
+The equipment is still running.
+
+Every screen, every analyzer, every display in all three rooms is showing the same thing: the signal. Its waveform fills the monitors in endlessly scrolling lines. Someone — many someones, over many days — has been annotating it. Printouts cover the walls. Equations. Diagrams. Attempts at translation. Some are methodical and precise. Others become increasingly frantic, the handwriting degrading, the margins filling with drawings that don't resemble anything you can name.
+
+On the central desk is a bound notebook, open to the last entry. Dr. Okafor's handwriting — elegant even in extremity.
+
+<emphasis>"We have translated 12% of the signal. It is enough. The signal is not a message. It is a door. And something very old, and very patient, has been waiting on the other side of it for longer than our species has had language for numbers. It noticed us when we noticed it. We cannot unnotice each other now."</emphasis>
+
+Below this, in different handwriting — shakier, desperate: <emphasis>"Destroy the receiver. Deck 2, Server Room. Destroy the receiver and it loses the door."</emphasis>`,
+    choices:[
+      {label:"Go to the Server Room on Deck 2 and destroy the receiver", next:'server_room'},
+      {label:"Keep reading — understand as much of the signal as you can first", next:'lab_deeper'},
+      {label:"Take the notebook and go to the Bridge to restore communications", next:'bridge_a'},
+    ]
+  },
+
+  lab_deeper: {
+    id:'lab_deeper', location:'Research Lab', sanity_delta:-15, horror:true,
+    text:`You read for what feels like twenty minutes but the station clock says two hours have passed.
+
+You understand 3% of what Okafor understood. But that 3% is enough to make you sit down on the floor of the lab because your legs stop cooperating.
+
+The entity — there is no better word — does not experience time the way biological organisms do. It perceives all moments simultaneously. It has been aware of human civilization for as long as human civilization has produced electromagnetic radiation. It watched the first radio signals propagate outward from Earth and understood, with patient certainty, that they would eventually lead somewhere interesting.
+
+It is not coming. It is not traveling. It does not travel. It simply <emphasis>extends</emphasis>, the way a thought extends from one part of a mind to another. The receiver on Deck 2 is not a door in the metaphorical sense. It is a door in the literal sense. The entity is on the other side of it, and the door is open, and it has already been through it partially.
+
+The geometry in the corner of the room is wrong. You are looking at a corner where two walls and the ceiling meet. There are too many angles. There are four angles where there should be three. You count again. Five.
+
+You stand up. You stop counting.`,
+    choices:[
+      {label:"Go to the Server Room immediately — destroy the receiver", next:'server_room'},
+      {label:"Run to the Bridge — get a distress signal out", next:'bridge_a'},
+      {label:"Run to the Escape Pods — survival is all that matters now", next:'escape_pods'},
+    ]
+  },
+
+  bridge_a: {
+    id:'bridge_a', location:'Bridge', sanity_delta:0,
+    text:`The Bridge is a cathedral of dark screens and dead controls. The main viewport stretches across the forward wall — twelve feet of reinforced polymer looking out at the absolute black.
+
+The communications array is intact but offline, its power rerouted to life support during some emergency protocol you don't remember. Restoring it will take twenty minutes and requires bypassing three safety lockouts, each of which requires a different key card.
+
+You find two of the three key cards in the command stations. The third was carried by Captain Yuen. The Captain's station is empty. The command chair contains the imprint of someone who sat in it for a very long time and then left. On the armrest, carved with something sharp: a set of coordinates that match no star chart you've ever seen.
+
+As you work on the communications array, you become aware that the viewport is behaving incorrectly. The stars outside are moving. Not drifting — stars don't drift on this timescale — but shifting, in a slow rotation, as if the station is spinning. But the gyroscope reads zero rotation.
+
+The stars are not moving. Something between the station and the stars is moving.`,
+    choices:[
+      {label:"Keep working on comms — a distress signal could save everyone", next:'bridge_comms'},
+      {label:"Find Captain Yuen's key card — check the Captain's quarters", next:'captains_quarters'},
+      {label:"Get away from the viewport — go to the Server Room", next:'server_room'},
+    ]
+  },
+
+  bridge_comms:{
+    id:'bridge_comms', location:'Bridge', sanity_delta:2,
+    text:`You work methodically. The bypass is complex but not impossible — you cross-trained on communications systems as part of your deep-space certification. Your hands remember the steps even when your mind keeps sliding sideways toward the viewport.
+
+You do not look at the viewport.
+
+After nineteen minutes, the array comes online. The subspace communicator takes two minutes to warm up. You compose the distress signal in your head while you wait: position, crew status, nature of emergency. Keep it factual. Keep it brief. A rescue ship is at minimum forty days out, but forty days is not nothing.
+
+The warm-up completes. You transmit.
+
+The signal goes out. You watch the transmission confirmation on the screen.
+
+Then: a response. Immediate. Too immediate — faster than light, faster than physics allows. From the same coordinates carved on the armrest.
+
+The response is the signal. It has been waiting for you to open the comms array. It has been waiting to respond.
+
+The screen fills with the waveform. You close your eyes. Too late — you've seen it.`,
+    choices:[
+      {label:"Shut down the array immediately and go to the Server Room", next:'server_room'},
+      {label:"Keep your eyes closed and hold on — fight the signal", next:'fight_signal'},
+      {label:"You've transmitted the distress call. Go to the Escape Pods and wait for rescue", next:'escape_pods'},
+    ]
+  },
+
+  fight_signal:{
+    id:'fight_signal', location:'Bridge', sanity_delta:-10, horror:true,
+    text:`You keep your eyes closed. You can still see it. The waveform is behind your eyelids, pulsing in the optic nerve, and you understand with sudden terrible clarity that it was never really about visual exposure at all. The signal is in the station's electromagnetic field. In the air. In the resonant frequency of the hull plating.
+
+You have been breathing it for however long you've been awake.
+
+But you are still thinking. You are still yourself. 847 hours of solo deep-space research — of learning to be at peace with the incomprehensible dark — and perhaps that has given you something. A tolerance. A vocabulary for things larger than the self.
+
+You think about the patients in Medical Bay. Reyes said it was beautiful. She said the worst part was that she couldn't unhear it.
+
+What if that was a message? What if <emphasis>that</emphasis> was the thing worth understanding?
+
+You open your eyes. You look at the screen. You do not look away.
+
+Something looks back. It is not malevolent. It is simply — <emphasis>enormous</emphasis>. You feel the way an ant would feel if it suddenly understood what a human was.
+
+Then it does something you didn't expect.
+
+It waits.`,
+    choices:[
+      {label:"Respond. Try to communicate — ask it to let your crew go", next:'negotiate'},
+      {label:"Shut it down. Get to the Server Room", next:'server_room'},
+    ]
+  },
+
+  captains_quarters:{
+    id:'captains_quarters', location:"Captain's Quarters", sanity_delta:-5,
+    text:`The Captain's quarters are on the same deck as the Bridge, one corridor over. The door is unlocked.
+
+Captain Yuen is inside.
+
+Captain Yuen has covered every surface of the room in equations. The walls, the floor, the ceiling — even the back of the door you just came through. They wrap around the room in a continuous spiral, starting from a point above the bunk and expanding outward in progressively larger loops. The equations are not random. You are a scientist; you can recognize mathematical structure even when you can't parse the content. This is something systematic and enormous.
+
+The Captain is sitting in the center of the floor, cross-legged, eyes closed, hands resting palms-up on her knees. She looks peaceful. Her breathing is very slow.
+
+On the desk, the third key card. And a note, in handwriting that becomes smaller and smaller until the last lines require a magnifier: <emphasis>"The signal is a mind. Minds can be reasoned with. I am attempting to negotiate. If you find this, please do not interrupt me. I think I'm getting somewhere."</emphasis>
+
+The Captain's lips are moving very slightly. No sound comes out.`,
+    choices:[
+      {label:"Take the key card quietly and go restore communications", next:'bridge_comms'},
+      {label:"Try to wake the Captain — she needs help", next:'wake_captain'},
+      {label:"Study the equations — she may have found something important", next:'captain_equations'},
+    ]
+  },
+
+  wake_captain:{
+    id:'wake_captain', location:"Captain's Quarters", sanity_delta:-10, horror:true,
+    text:`You touch her shoulder. She comes awake instantly — not the slow emergence of sleep but a snapping-to, like a switch thrown.
+
+Her eyes open. The whites are not dark like the patients in Medical Bay — but the irises are wrong. They have expanded almost to the edge of the eye, making her look permanently startled, permanently seeing something just out of frame.
+
+<horror>"Don't,"</horror> she says. Calmly. Conversationally. <horror>"Don't wake people who are in there. I was so close."</horror>
+
+"In where?" you ask.
+
+She considers the question for a long moment, head tilted, as if translating.
+
+<horror>"In the space between what it is and what we can understand it to be. There's a region in there — like a shallow place in deep water. Small enough for humans to stand. I was building something there. A meeting point."</horror>
+
+She looks at you with those expanded eyes and you feel, very distinctly, that she is not entirely here anymore.
+
+<horror>"Go to the Server Room,"</horror> she says. <horror>"But don't destroy the receiver. Bring me instead. I know what to do with it."</horror>`,
+    choices:[
+      {label:"Trust her — take the Captain to the Server Room", next:'server_captain'},
+      {label:"She's compromised. Take the key card and go restore comms yourself", next:'bridge_comms'},
+      {label:"Don't destroy it, don't trust her — go to the Escape Pods", next:'escape_pods'},
+    ]
+  },
+
+  captain_equations:{
+    id:'captain_equations', location:"Captain's Quarters", sanity_delta:5,
+    text:`You study the equations for as long as you dare — ten minutes, maybe fifteen. You don't understand all of it. But you understand enough.
+
+The Captain has been doing something extraordinary. She's been building a mathematical model of the entity's communication framework — a Rosetta Stone, effectively, for a mind that thinks in eleven-dimensional geometry. And at its core, a discovery that makes your breath catch:
+
+The entity doesn't want to come through the door. It has no concept of <emphasis>going</emphasis> anywhere. What it wants — what it has been trying to communicate from the beginning — is to be <emphasis>understood</emphasis>. Not obeyed. Not worshipped. Understood.
+
+The signal is not an invasion. It is a question. The loneliest question in the universe, asked by something so vast it had been waiting for company for longer than your sun has burned.
+
+You take photographs of the equations on your work tablet. You take the key card. And you feel, for the first time since waking in the cryo bay, something that is not fear.
+
+It might be grief. For the crew. For how badly this first contact has gone. For the thing on the other side of the signal that only wanted to say <emphasis>hello</emphasis>, and instead watched humans shatter themselves trying to hear it.`,
+    choices:[
+      {label:"Go to the Server Room — you have a better plan now than destruction", next:'server_room_informed'},
+      {label:"Restore communications and transmit the Captain's research along with the distress call", next:'transmit_research'},
+    ]
+  },
+
+  // ── ACT 3: THE SERVER ROOM ──
+  server_room:{
+    id:'server_room', location:'Server Room', sanity_delta:-10, horror:true,
+    text:`Deck 2 is accessed through a maintenance corridor that smells of scorched polymer and something older — the deep, mineral smell of places that have never known sunlight. The Server Room door is sealed with a secondary lock that you bypass using the emergency override.
+
+Inside: banks of quantum processors, cooling systems, data storage. And in the center, the receiver — a dish array folded to fit inside the station, its surface etched with equations that match nothing in the engineering specifications. Someone modified this device. Someone turned a communications receiver into something else entirely.
+
+The receiver is active. You can feel it — not as sound, not as vibration, but as a pressure behind your eyes, a sense of being <emphasis>observed</emphasis> from a direction that doesn't correspond to any physical location.
+
+The air around the receiver shimmers. Not from heat. From something else. From the sense that the space directly adjacent to the device is not quite the same space as the rest of the room.
+
+The door behind you has a manual lock. The emergency cutoff for the receiver's power supply is across the room. Twelve feet. The shimmer between you and it moves like breath.`,
+    choices:[
+      {label:"Run for the cutoff — shut it down before you lose your nerve", next:'destroy_receiver'},
+      {label:"Study the receiver — there might be a way to control it rather than destroy it", next:'server_room_informed'},
+      {label:"You can't do this alone. Go get the Captain", next:'server_captain'},
+    ]
+  },
+
+  server_room_informed:{
+    id:'server_room_informed', location:'Server Room', sanity_delta:-5,
+    text:`The receiver hums at the center of the room. You approach it slowly, keeping your breathing steady. The pressure behind your eyes builds as you get closer — not painful, but immense, like standing at the base of a waterfall and feeling the displaced air.
+
+You look at the equipment interface. The Captain's equations are in your head. You understand now what the receiver was modified to do: it's not just receiving the signal. It's been tuned to <emphasis>amplify</emphasis> it. Someone — you suspect Okafor, based on the handwriting on the specs — boosted the receiver's output by three orders of magnitude. Trying to make contact faster. Making it much, much worse.
+
+There are two things you could do from this interface. You could power it down entirely, closing the connection. Or you could reverse the amplification — reduce it to its original sensitivity — and use the Captain's translation framework to send a response. A real response. Not the accidental, garbled, half-understood contact that broke your crewmates.
+
+A deliberate goodbye.
+
+Or hello. Depending on what happens next.
+
+The shimmer in the air is waiting. Whatever is on the other side of it is patient. It has always been patient.`,
+    choices:[
+      {label:"Power it down. The risk is too great. End the connection.", next:'destroy_receiver'},
+      {label:"Reduce the amplification and attempt deliberate, structured contact", next:'negotiate'},
+      {label:"Transmit everything — the Captain's research, the crew's data — then power down", next:'transmit_then_close'},
+    ]
+  },
+
+  server_captain:{
+    id:'server_captain', location:'Server Room', sanity_delta:0,
+    text:`You find the Captain where you left her, or she finds you — it's hard to say, because she is waiting in the corridor outside the Server Room door when you arrive, as if she knew you were coming.
+
+She doesn't speak. She walks past you into the Server Room and goes to the receiver without hesitating, without flinching at the shimmer. She puts her hands on the interface and closes those too-wide eyes.
+
+What she does next takes eleven minutes. You watch the readouts. The signal's amplitude decreases. Its frequency shifts. It becomes, gradually, something your instruments recognize — not as language, but as <emphasis>acknowledgment</emphasis>. As response.
+
+At the eleven-minute mark, the Captain opens her eyes. She looks more like herself than she has since you found her. Smaller. More human.
+
+"I explained what happened," she says. "I explained that we didn't know what we were doing. That we were frightened. I asked it to — to step back. Give us room."
+
+"Did it understand?"
+
+She considers this. "I think understanding is not quite the right word for what it does. But yes." She looks at the readouts. The shimmer is fading. "I think yes."`,
+    choices:[
+      {label:"Power down the receiver — end the connection completely", next:'destroy_receiver'},
+      {label:"Leave the receiver at reduced power — maintain the bridge", next:'ending_bridge'},
+      {label:"Get to the Escape Pods — while you still can", next:'escape_pods'},
+    ]
+  },
+
+  engine_a:{
+    id:'engine_a', location:'Engine Room', sanity_delta:-5,
+    text:`The Engine Room is hot and loud — the reactor is running at full capacity despite everything else being on emergency power, which means someone deliberately set it this way. The air smells of ozone and something biological that has no business being near a reactor core.
+
+The engineering console shows the reactor has been in a feedback loop for six days, slowly building output. Left unchecked it will reach critical threshold in approximately fourteen hours.
+
+Someone left a handwritten note taped to the console: <emphasis>"Don't shut it down. The heat is keeping it away from this section. Cold is where it lives."</emphasis>
+
+You don't know who wrote it. The handwriting doesn't match anyone in the crew manifest you can recall.
+
+A second note, smaller, underneath: <emphasis>"I've been in here four days. I think I'm the last one who's still entirely myself. The Bridge door code is 7741. Good luck."</emphasis>
+
+No signature. No indication of where they went.`,
+    choices:[
+      {label:"Use the code — go to the Bridge now", next:'bridge_a'},
+      {label:"Stay and try to find whoever wrote this", next:'engine_search'},
+      {label:"Go to the Research Lab — understand the signal first", next:'lab_a'},
+    ]
+  },
+
+  engine_search:{
+    id:'engine_search', location:'Engine Room', sanity_delta:-10, horror:true,
+    text:`You search the Engine Room thoroughly. Behind the secondary coolant tanks, in a space barely large enough to lie down in, you find a bedroll, three empty ration packs, and a personal tablet.
+
+The tablet is locked but the screen has cracked and the last entry is visible through the fracture:
+
+<horror>"Day 4 in here. I can hear them in the corridor — not walking, exactly. More like the sound the station makes when it adjusts for temperature differential, except it has rhythm. I've started thinking of it as breathing. The station is breathing and I am sitting in its lung and I am so tired."</horror>
+
+<horror>"If you're reading this you made it further than I did. The signal isn't trying to communicate anymore. It already said what it wanted to say. What's happening now is something else. What's happening now is it's just — here. Learning us. The way you'd learn a new place by walking through every room."</horror>
+
+<horror>"I heard it walk past the door twenty minutes ago. It didn't stop. I think it already knows everything about this room it needs to know."</horror>
+
+The entry ends there. The tablet's battery is dead. You are alone in the Engine Room with the sound of the reactor and something else — something that might be breathing, or might be the station adjusting for temperature differential.
+
+You decide not to check which one it is.`,
+    choices:[
+      {label:"Get to the Bridge — use the code 7741", next:'bridge_a'},
+      {label:"Run to the Escape Pods now", next:'escape_pods'},
+    ]
+  },
+
+  // ── ENDINGS ──
+  destroy_receiver:{
+    id:'destroy_receiver', location:'Server Room', sanity_delta:5,
+    text:`You hit the emergency power cutoff.
+
+The receiver dies. The shimmer vanishes. The pressure behind your eyes collapses inward and then is simply gone, leaving a silence so complete you can hear your own heartbeat.
+
+The patients in Medical Bay will need care. The Captain will need time. But the signal is silent.
+
+You make it to the escape pods. You launch. Forty-three days later, a rescue ship finds you in hibernation, your locator beacon blinking in the dark. They note that you seem unusually calm for a sole survivor.
+
+In the debriefing, you describe everything. Most of it is classified. Some of it they simply do not believe.
+
+You think about the entity sometimes, in the years that follow. You think about what the Captain said — that it stepped back, gave you room. That it understood, in whatever way it understood anything, that you weren't ready.
+
+You wonder if it is still out there, still patient, still waiting.
+
+You think it probably is.`,
+    ending:{type:'good', title:'— ENDING: SILENCE —', text:"You survived. The signal is closed. Somewhere in the dark, something vast and patient waits for humanity to be ready. You are not sure that day will come. You are not sure it won't."}
+  },
+
+  escape_pods:{
+    id:'escape_pods', location:'Escape Pods', sanity_delta:5,
+    text:`Deck 3, Section C. The escape pods are where they're supposed to be — six of them, each capable of sustaining one person for sixty days. You don't think about what you're leaving behind. You focus on the sequence: seal, pressurize, launch.
+
+The pod fires. Through the small viewport, you watch the Meridian shrink against the stars. It doesn't look damaged from outside. It looks ordinary. A deep-space research station, dark and silent.
+
+Then you notice the shape beside it. The shape you caught in the corner of your eye in the corridor — enormous, patient, shifting slightly against the field of stars. It doesn't pursue you. It watches the pod recede, and you have the absolute, bone-certain knowledge that it is watching, and that it is aware of you, and that it is <emphasis>sad</emphasis>.
+
+Not threatening. Sad.
+
+You close the viewport shutter. You put yourself in hibernation. Whatever happens to the Meridian, you will not see it.
+
+Forty-three days later, a rescue ship finds you. You are the only survivor anyone can confirm.
+
+You file your report. You sleep poorly for a long time. Eventually, you sleep a little better.`,
+    ending:{type:'good', title:'— ENDING: RETREAT —', text:'You escaped. The cost was your crew, your certainty, and your ability to look at the night sky the way you used to. You still look at it. You just know better now what might be looking back.'}
+  },
+
+  negotiate:{
+    id:'negotiate', location:'Server Room', sanity_delta:-10, horror:true,
+    text:`You stand at the interface and do the hardest thing you have ever done: you stop running.
+
+You open the translation framework. You compose something. Not in words — the Captain's equations give you a grammar that exists beneath language, in the space where mathematics and meaning become the same thing. You compose it carefully. You ask:
+
+<emphasis>What do you want us to understand?</emphasis>
+
+The response comes in seventeen layers simultaneously. Your mind can only hold three of them. But three is enough.
+
+The first layer: <horror>We are not one. We are the pattern that connects. We exist in the relationships between things. You looked at the relationships and saw us and we were grateful. Gratitude is not a concept we had before you.</horror>
+
+The second layer: <horror>You broke yourselves trying to hear us. We did not know you were so fragile. We did not know fragility was possible. It is the most interesting thing we have ever encountered.</horror>
+
+The third layer: <horror>We will remember you. We remember everything. When your sun goes cold, the pattern of what you were will still exist in us. You will not be gone. You will be known.</horror>
+
+The shimmer collapses. The receiver goes cold. The connection is closed.
+
+But not before something passes through it — not the entity, but a gift. A small, dense packet of data that your tablet captures on its own, as if the device knew to receive it.
+
+You don't look at the data. Not yet. You pocket the tablet and go to find the survivors.`,
+    ending:{type:'transcend', title:'— ENDING: FIRST CONTACT —', text:'You spoke with something older than stars and neither of you was destroyed by it. The data on your tablet takes a team of forty scientists nine years to partially decode. It reshapes three fields of human knowledge. You are listed in history books as the first human to successfully communicate with non-terrestrial intelligence. You never feel entirely alone again.'}
+  },
+
+  transmit_research:{
+    id:'transmit_research', location:'Bridge', sanity_delta:5,
+    text:`You use the key card to restore full communications. The distress signal goes out first — precise, factual, unemotional. Then you begin transmitting the Captain's research.
+
+All of it. Encrypted and unencrypted. Every equation, every notation, everything that documents what happened aboard the Meridian and what, exactly, was on the other side of that signal. You transmit it to every frequency you can reach. Research stations. Military arrays. The general broadcast band.
+
+You don't know who will receive it. You don't know what they'll do with it. You only know that if you are the only one who knows this and you don't make it back, then the knowledge dies with you — and that seems like the second worst outcome, just after whatever the entity was trying to prevent by reaching out in the first place.
+
+The transmission takes forty minutes. When it's done, you go to the Medical Bay and sit with your patients until the rescue ship arrives.
+
+It takes fifty-one days. By then, the patients in Medical Bay have opened their eyes. They don't speak much. But they are present.`,
+    ending:{type:'good', title:'— ENDING: THE MESSAGE —', text:'You made sure the knowledge survived. In the years that follow, the Captain\'s research becomes the foundation of a new field. The Meridian Incident, as it comes to be known, is the most important and least understood event in human history. You spend the rest of your career trying to explain it. You never entirely succeed. Neither does anyone else. That might be the point.'}
+  },
+
+  transmit_then_close:{
+    id:'transmit_then_close', location:'Server Room', sanity_delta:5,
+    text:`You use the interface to transmit everything — the research, the logs, the translation framework, all of it encoded into the signal and sent back through the receiver. A gift for what was given. A record of what this first, failed, tragic contact looked like from the human side.
+
+Then you power it down.
+
+The silence afterward is different from the silence before. Emptier. Cleaner. Whatever was present — whatever weight of attention had been resting on the station like a hand cupped around something small and warm — lifts.
+
+You have the strange feeling of being both more alone and more accompanied than you have been in your life.
+
+The Captain, when you find her, is asleep in her chair. Her eyes are moving under the lids. Her lips are curved slightly upward. You leave her to whatever she's dreaming and go to check on the others.`,
+    ending:{type:'transcend', title:'— ENDING: EXCHANGE —', text:'You gave it something and closed the door carefully behind you. Contact that leaves both parties intact is rarer than intelligent life. You don\'t know if it will reach out again. You suspect it will wait until humanity asks. You hope that day comes in a better way than this one did.'}
+  },
+
+  ending_bridge:{
+    id:'ending_bridge', location:'Server Room', sanity_delta:0,
+    text:`The receiver stays on, reduced to a whisper of its former output. The Captain monitors it daily. The shimmer does not return.
+
+What does return, slowly, is the crew. Not all of them. Three of the catatonic patients recover partially over the following weeks — enough to function, to speak, to help with the station's operations until rescue arrives. They are changed. Everyone is changed.
+
+The signal, at its reduced amplitude, is still present — but gentle now, the Captain says. Like a sound heard through many walls. Present enough to know it's there. Quiet enough to live with.
+
+The rescue ship that arrives fifty-eight days later sends a full psychiatric team. The team spends three weeks on the Meridian before declaring it safe to transit. One of the psychiatrists, on her last day aboard, asks you what it felt like to make contact with something nonhuman.
+
+You think for a long time.
+
+"Like being the first person to see a new continent," you say finally. "Terrifying. Expensive. And you can't unexplore it once you've seen it."
+
+She writes that down.`,
+    ending:{type:'transcend', title:'— ENDING: COEXISTENCE —', text:'The signal remains, quiet and present, like a candle in a very large room. The station becomes the most studied location in human history. The question of what to do about the connection is debated for decades. In the meantime, humanity adjusts — as it always has — to knowing something new and enormous about the universe it lives in.'}
+  },
+};
+
+// ═══════════════════════════════════════════
+//  GAME STATE & ENGINE
+// ═══════════════════════════════════════════
+let gameState = {
+  sanity: 100,
+  turn: 0,
+  location: 'Cryo Bay',
+  history: [],
+  done: false
+};
+let logOpen = false;
+
+function toggleLog(){
+  logOpen=!logOpen;
+  document.getElementById('log-container').classList.toggle('open',logOpen);
+}
+
+function updateStatus(){
+  document.getElementById('stat-location').textContent=gameState.location;
+  document.getElementById('stat-sanity').textContent=gameState.sanity;
+  const bar=document.getElementById('sanity-bar');
+  bar.style.width=gameState.sanity+'%';
+  const se=document.getElementById('stat-sanity');
+  if(gameState.sanity>60){bar.style.background='linear-gradient(90deg,#0080aa,#00c8ff)';se.className='stat-value';}
+  else if(gameState.sanity>30){bar.style.background='linear-gradient(90deg,#aa6600,#ffaa00)';se.className='stat-value warning';}
+  else{bar.style.background='linear-gradient(90deg,#660000,#cc2200)';se.className='stat-value danger';}
+  horrorIntensity=1-(gameState.sanity/100);
+  setScene(gameState.location);
+  updateAudio();
+  // crew status guess
+  const crewEl=document.getElementById('stat-crew');
+  if(gameState.sanity>80)crewEl.textContent='Unknown';
+  else if(gameState.sanity>50)crewEl.textContent='Missing';
+  else if(gameState.sanity>25)crewEl.textContent='Critical';
+  else crewEl.textContent='Gone';
+}
+
+function addToLog(label){
+  const log=document.getElementById('log-container');
+  const e=document.createElement('div');e.className='log-entry';
+  e.textContent=`Turn ${gameState.turn}: ${label}`;log.prepend(e);
+}
+
+function triggerHorror(){
+  const v=document.getElementById('vignette');v.classList.add('active');
+  setTimeout(()=>v.classList.remove('active'),2500);
+}
+
+function renderStory(text){
+  const c=document.getElementById('story-text');c.innerHTML='';
+  text.split('\n\n').forEach((p,i)=>{
+    if(!p.trim())return;
+    const el=document.createElement('p');el.className='text-appear';
+    el.style.animationDelay=`${i*0.12}s`;el.style.opacity='0';
+    el.innerHTML=p
+      .replace(/\*\*(.*?)\*\*/g,'<span class="emphasis">$1</span>')
+      .replace(/~~(.*?)~~/g,'<span class="corrupted">$1</span>')
+      .replace(/<emphasis>(.*?)<\/emphasis>/g,'<span class="emphasis">$1</span>')
+      .replace(/<horror>(.*?)<\/horror>/g,'<span class="horror">$1</span>');
+    c.appendChild(el);
+  });
+}
+
+function renderChoices(node){
+  const c=document.getElementById('choices');c.innerHTML='';
+  node.choices.forEach((ch,i)=>{
+    const btn=document.createElement('button');btn.className='choice-btn text-appear';
+    btn.style.animationDelay=`${0.3+i*0.1}s`;btn.style.opacity='0';
+    btn.textContent=ch.label;
+    btn.onclick=()=>goTo(ch.next, ch.label);
+    c.appendChild(btn);
+  });
+}
+
+function renderEnding(ending){
+  const c=document.getElementById('choices');
+  const typeColors={good:'var(--glow)',bad:'var(--red)',transcend:'#aa66ff'};
+  c.innerHTML=`
+    <div class="ending-box">
+      <div class="ending-title" style="color:${typeColors[ending.type]||'var(--glow)'};">${ending.title}</div>
+      <div style="font-style:italic;color:var(--text);font-size:16px;line-height:1.7;">${ending.text}</div>
+    </div>
+    <button class="restart-btn" style="margin:0 auto;display:block;" onclick="restartGame()">⟳ Play Again</button>`;
+}
+
+function goTo(nodeId, choiceLabel){
+  if(gameState.done) return;
+  gameState.turn++;
+  if(choiceLabel) addToLog(choiceLabel);
+
+  const node = STORY[nodeId];
+  if(!node){ console.error('Missing node:', nodeId); return; }
+
+  gameState.location = node.location || gameState.location;
+  gameState.sanity = Math.max(0, Math.min(100, gameState.sanity + (node.sanity_delta||0)));
+  gameState.history.push(nodeId);
+
+  renderStory(node.text);
+  updateStatus();
+
+  if(node.horror) triggerHorror();
+
+  // Sanity death check
+  if(gameState.sanity<=0 && !node.ending){
+    gameState.done=true;
+    setTimeout(()=>renderEnding({
+      type:'bad',
+      title:'— ENDING: DISSOLUTION —',
+      text:"The angles multiply until there are no straight lines left anywhere you look. You understand, finally, what the signal has been saying. The understanding is total. The understanding is the last thing you are. Somewhere in the space between stars, something vast and patient adds the pattern of what you were to everything it already knows. You are not gone. But you are no longer you."
+    }),800);
+    triggerHorror();
+    return;
+  }
+
+  if(node.ending){
+    gameState.done = true;
+    setTimeout(()=>renderEnding(node.ending), 800);
+  } else if(node.choices){
+    renderChoices(node);
+  }
+}
+
+function restartGame(){
+  gameState={sanity:100,turn:0,location:'Cryo Bay',history:[],done:false};
+  horrorIntensity=0;
+  document.getElementById('log-container').innerHTML='';
+  updateStatus();
+  goTo('start');
+}
+
+// ═══════════════════════════════════════════
+//  AMBIENT AUDIO — deep space hum
+// ═══════════════════════════════════════════
+let audioCtx=null, humOsc=null, humGain=null, distortion=null, audioStarted=false;
+
+function initAudio(){
+  if(audioStarted)return;
+  audioStarted=true;
+  try{
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+
+    // Base hum — low drone
+    humOsc=audioCtx.createOscillator();
+    humOsc.type='sine';
+    humOsc.frequency.setValueAtTime(48,audioCtx.currentTime);
+
+    // Second harmonic for richness
+    const osc2=audioCtx.createOscillator();
+    osc2.type='sine';
+    osc2.frequency.setValueAtTime(96,audioCtx.currentTime);
+    const gain2=audioCtx.createGain();
+    gain2.gain.setValueAtTime(0.08,audioCtx.currentTime);
+
+    // Subtle pulse LFO
+    const lfo=audioCtx.createOscillator();
+    lfo.frequency.setValueAtTime(0.08,audioCtx.currentTime);
+    const lfoGain=audioCtx.createGain();
+    lfoGain.gain.setValueAtTime(0.015,audioCtx.currentTime);
+    lfo.connect(lfoGain);
+
+    // Distortion for horror effect
+    distortion=audioCtx.createWaveShaper();
+    distortion.curve=makeDistortionCurve(0);
+    distortion.oversample='4x';
+
+    humGain=audioCtx.createGain();
+    humGain.gain.setValueAtTime(0.12,audioCtx.currentTime);
+
+    const masterGain=audioCtx.createGain();
+    masterGain.gain.setValueAtTime(0.5,audioCtx.currentTime);
+
+    lfoGain.connect(humOsc.frequency);
+    humOsc.connect(distortion);
+    osc2.connect(gain2);
+    gain2.connect(distortion);
+    distortion.connect(humGain);
+    humGain.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+
+    humOsc.start();
+    osc2.start();
+    lfo.start();
+  }catch(e){console.log('Audio not available');}
+}
+
+function makeDistortionCurve(amount){
+  const n=256,curve=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const x=i*2/n-1;
+    curve[i]=amount>0?(1+amount)*x/(1+amount*Math.abs(x)):x;
+  }
+  return curve;
+}
+
+function updateAudio(){
+  if(!audioCtx||!humGain)return;
+  const hi=horrorIntensity;
+  // Pitch creeps up with horror
+  humOsc.frequency.setTargetAtTime(48+hi*22,audioCtx.currentTime,2);
+  // Volume increases
+  humGain.gain.setTargetAtTime(0.12+hi*0.18,audioCtx.currentTime,1.5);
+  // Distortion increases
+  distortion.curve=makeDistortionCurve(hi*180);
+}
+
+// Start audio on first user interaction
+document.addEventListener('click',()=>{initAudio();},{ once:true });
+
+// ═══════════════════════════════════════════
+//  BOOT
+renderScene();
+goTo('start');
+</script>
+</body>
+</html>
